@@ -15,7 +15,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.conf.urls import url
+from .import views
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    url(r'^retrieveProducts', views.retrieve_products),
+    url(r'^createCart', views.create_cart),
+    url(r'^checkoutCart', views.checkout_cart),
+    url(r'^discardCart', views.discard_cart),
+    url(r'^modifyCart$', views.modify_cart),
 ]

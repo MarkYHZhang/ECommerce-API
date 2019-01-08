@@ -3,64 +3,127 @@ from django.http import HttpResponse
 from .models import Cart
 from django.core.serializers import serialize
 from ratelimit.decorators import ratelimit
-from. responsegenerator import invalid
-from. responsegenerator import missing
-from. responsegenerator import empty
+from .responsegenerator import invalid
+from .responsegenerator import missing
+from .responsegenerator import empty
+from .responsegenerator import response
 import uuid
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.core.serializers.json import Serializer
 
-#rate limit by ip for maximum of 1 request per 5 seconds
+
+def jsonify(obj, id_name):
+    return HttpResponse(CustomSerializer().serialize(obj).replace("\\\"","").replace("\"[","[").replace("]\"","]").replace("\"pk\"","\""+id_name+"\"")[1:-1])
+
+
+class CustomSerializer(Serializer):
+    def get_dump_object(self, obj):
+        dump_object = self._current or {}
+        dump_object.update({'pk': (obj._get_pk_val())})
+        return dump_object
+
+
+# rate limit by ip for maximum of 1 request per 5 seconds
+@csrf_exempt
 @ratelimit(key='ip', rate='1/5s')
-def retrieve(request):
-    if request.POST:
+def retrieve_products(request):
+    if request.body:
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
         products = Product.objects.all()
         available_inventory_only = False
-        if "availableInventoryOnly" in request.POST and request.POST["availableInventoryOnly"] == "true":
+        if "availableInventoryOnly" in body and body["availableInventoryOnly"] == "true":
             available_inventory_only = True
-        if "products" in request.POST:
-            product_ids = request.POST["products"]
-            for product_id in product_ids:
-                if available_inventory_only:
-                    products = products.filter(id=product_id, inventory_count__gt=0)
-                else:
-                    products = products.filter(id=product_id)
-        elif "all" in request.POST:
+        if "products" in body:
+            product_ids = body["products"]
+            products = Product.objects.filter(id__in=product_ids)
+            if available_inventory_only:
+                products = Product.objects.filter(inventory_count__gt=0)
+        elif "all" in body:
             if available_inventory_only:
                 products = products.filter(inventory_count__gt=0)
-        return HttpResponse(serialize('json', products))
+        return HttpResponse(CustomSerializer().serialize(products))
+    return HttpResponse("API ACCESS ONLY")
 
-
-#rate limit by ip for maximum of 1 request per 45 seconds
+@csrf_exempt
+# rate limit by ip for maximum of 1 request per 45 seconds
 @ratelimit(key='ip', rate='1/1m')
 def create_cart(request):
-    if request.GET:
-        cart_id = str(uuid.uuid4())
-        Cart.objects.create(uuid=cart_id)
-        return HttpResponse(cart_id)
+    cart_id = uuid.uuid4()
+    print(cart_id)
+    Cart.objects.create(id=cart_id)
+    return HttpResponse(cart_id)
+
+@csrf_exempt
+def discard_cart(request):
+    if request.body:
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        if "cart_id" not in body:
+            return missing("cart id")
+        if not Cart.objects.filter(id=body['cart_id']).exists():
+            return invalid("cart id")
+        Cart.objects.filter(id=body['cart_id']).delete()
+        return response("removed")
+    return HttpResponse("API ACCESS ONLY")
+
+
+@csrf_exempt
+def checkout_cart(request):
+    if request.body:
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        if "cart_id" not in body:
+            return missing("cart id")
+        if not Cart.objects.filter(id=body['cart_id']).exists():
+            return invalid("cart id")
+
+        cart_id = body['cart_id']
+        cartobj = Cart.objects.filter(id=cart_id)
+        cart = Cart.objects.get(id=cart_id)
+        for index, item in enumerate(cart.items):
+            print(index, item)
+            cur_product = Product.objects.get(id=item)
+            quantity = cart.item_quantities[index]
+
+            if cur_product.inventory_count - quantity < 0:
+                return response("Not enough inventory for item: " + item[0])
+
+            cur_product.inventory_count -= quantity
+            cur_product.save()
+        Cart.objects.filter(id=cart_id).delete()
+        return jsonify(cartobj, "cart_id")
+    return HttpResponse("API ACCESS ONLY")
 
 
 valid_actions = ["add", "remove"]
 
-def modify_cart(request):
-    if request.POST:
 
-        if "cart_id" not in request.POST:
+@csrf_exempt
+def modify_cart(request):
+    if request.body:
+        body_unicode = request.body.decode('utf-8')
+        body = json.loads(body_unicode)
+        if "cart_id" not in body:
             return missing("cart id")
-        if "items" not in request.POST:
+        if "items" not in body:
             return missing("items array")
 
-        if not Cart.objects.filter(id=request.POST['cart_id']).exists():
+        if not Cart.objects.filter(id=body['cart_id']).exists():
             return invalid("cart id")
-        if request.POST['items'] == "":
+        if body['items'] == "":
             return empty("items array")
 
-        action = request.POST['type']
-        cart_id = request.POST['cart_id']
-        items = request.POST['items']
+        cart_id = body['cart_id']
+        cartobj = Cart.objects.filter(id=cart_id)
+        cart = Cart.objects.get(id=cart_id)
+        items = body['items']
 
         for item in items:
             if "action" not in item:
                 return missing("action type")
-            if "action" not in valid_actions:
+            if item["action"] not in valid_actions:
                 return invalid("action")
 
             if "product_id" not in item:
@@ -71,5 +134,30 @@ def modify_cart(request):
 
             if "quantity" not in item:
                 return missing("quantity")
-            if item["quantity"] <= 0 and not isinstance(item["quantity"], int):
+            if not isinstance(item["quantity"], int) or int(item["quantity"]) <= 0:
                 return invalid("quantity")
+
+            quantity = int(item["quantity"])
+            cur_product = Product.objects.get(id=product_id)
+
+            if item["action"] == "add":
+                if cur_product.id in cart.items:
+                    ind = cart.items.index(cur_product.id)
+                    cart.item_quantities[ind] += quantity
+                else:
+                    cart.items.append(cur_product.id)
+                    cart.item_quantities.append(quantity)
+                cart.cost += quantity*cur_product.price
+            else:
+                if cur_product.id not in cart.items:
+                    return invalid("product")
+                ind = cart.items.index(cur_product.id)
+                cart.item_quantities[ind] -= min(cart.item_quantities[ind],quantity)
+                if cart.item_quantities[ind] <= 0:
+                    del cart.items[ind]
+                    del cart.item_quantities[ind]
+                cart.cost -= quantity*cur_product.price
+            cart.save()
+        return jsonify(cartobj, "cart_id")
+    return HttpResponse("API ACCESS ONLY")
+
