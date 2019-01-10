@@ -7,7 +7,7 @@ class ProductTest(TestCase):
 
     @staticmethod
     def create_product(id="test_id", name="Test Product Name", price=100.0,count=10):
-        return Product.objects.create(id,name,price,count)
+        return Product.objects.create(id=id,title=name,price=price,inventory_count=count)
 
     def test_product_creation(self):
         id = "sample_id"
