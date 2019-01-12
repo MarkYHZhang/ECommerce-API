@@ -13,8 +13,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.serializers.json import Serializer
 
 
-def jsonify(obj, id_name):
-    return HttpResponse(CustomSerializer().serialize(obj).replace("\\\"","").replace("\"[","[").replace("]\"","]").replace("\"pk\"","\""+id_name+"\""))
+def raw_jsonify(string, id_name, cnt):
+    return string.replace("\\\"","\"",cnt*2).replace("\\\"","").replace("\"[","[").replace("]\"","]").replace("\"pk\"","\""+id_name+"\"").replace("cost\": \"","cost\": ").replace("\",",",")
+
+
+def jsonify(obj, id_name, cnt):
+    return HttpResponse(raw_jsonify(CustomSerializer().serialize(obj),id_name,cnt))
 
 
 class CustomSerializer(Serializer):
@@ -43,7 +47,7 @@ def retrieve_products(request):
         elif "all" in body:
             if available_inventory_only:
                 products = products.filter(inventory_count__gt=0)
-        return HttpResponse(jsonify(products,"product_id"))
+        return HttpResponse(jsonify(products,"product_id",1000000))
     return HttpResponse("API ACCESS ONLY")
 
 @csrf_exempt
@@ -157,6 +161,6 @@ def modify_cart(request):
                     del cart.item_quantities[ind]
                 cart.cost -= quantity*cur_product.price
             cart.save()
-        return jsonify(cartobj, "cart_id")
+        return jsonify(cartobj, "cart_id", len(cartobj[0].items))
     return HttpResponse("API ACCESS ONLY")
 
