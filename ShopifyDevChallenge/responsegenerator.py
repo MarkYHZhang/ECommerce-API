@@ -1,7 +1,7 @@
 from django.http import HttpResponse
 
 def response(string):
-    return HttpResponse("{response:"+string+"}")
+    return HttpResponse("{\"response\": \""+string.upper().replace(" ", "_")+"\"}")
 
 
 def missing(string):

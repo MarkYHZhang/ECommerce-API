@@ -14,7 +14,7 @@ from django.core.serializers.json import Serializer
 
 
 def jsonify(obj, id_name):
-    return HttpResponse(CustomSerializer().serialize(obj).replace("\\\"","").replace("\"[","[").replace("]\"","]").replace("\"pk\"","\""+id_name+"\"")[1:-1])
+    return HttpResponse(CustomSerializer().serialize(obj).replace("\\\"","").replace("\"[","[").replace("]\"","]").replace("\"pk\"","\""+id_name+"\""))
 
 
 class CustomSerializer(Serializer):
@@ -43,7 +43,7 @@ def retrieve_products(request):
         elif "all" in body:
             if available_inventory_only:
                 products = products.filter(inventory_count__gt=0)
-        return HttpResponse(CustomSerializer().serialize(products))
+        return HttpResponse(jsonify(products,"product_id"))
     return HttpResponse("API ACCESS ONLY")
 
 @csrf_exempt
@@ -80,7 +80,6 @@ def checkout_cart(request):
             return invalid("cart id")
 
         cart_id = body['cart_id']
-        cartobj = Cart.objects.filter(id=cart_id)
         cart = Cart.objects.get(id=cart_id)
         for index, item in enumerate(cart.items):
             print(index, item)
@@ -88,12 +87,12 @@ def checkout_cart(request):
             quantity = cart.item_quantities[index]
 
             if cur_product.inventory_count - quantity < 0:
-                return response("Not enough inventory for item: " + item[0])
+                return response("lack inventory for (" + item[0]+")")
 
             cur_product.inventory_count -= quantity
             cur_product.save()
         Cart.objects.filter(id=cart_id).delete()
-        return jsonify(cartobj, "cart_id")
+        return response("checkout success")
     return HttpResponse("API ACCESS ONLY")
 
 
