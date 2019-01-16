@@ -1,10 +1,12 @@
 from .models import Product
+from .models import Token
 from django.http import HttpResponse
 from .models import Cart
 from django.core.serializers import serialize
 from ratelimit.decorators import ratelimit
 from .responsegenerator import invalid
 from .responsegenerator import missing
+from .responsegenerator import access_denied
 from .responsegenerator import empty
 from .responsegenerator import response
 from .responsegenerator import response_no_format
@@ -12,6 +14,11 @@ import uuid
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.serializers.json import Serializer
+from secrets import token_hex
+from time import time
+
+
+max_token_expiry_interval = 60*60*3 # 3 hours
 
 
 def raw_jsonify(string, id_name):
@@ -29,10 +36,23 @@ class CustomSerializer(Serializer):
         return dump_object
 
 
+@csrf_exempt
+@ratelimit(key='ip', rate='1/60s')
+def access_token(request):
+    token = token_hex(24)
+    timestp = int(time())
+    Token.objects.create(token=token,timestamp=timestp)
+    return response_no_format(token)
+
 # rate limit by ip for maximum of 1 request per 5 seconds
 @csrf_exempt
 @ratelimit(key='ip', rate='1/5s')
 def retrieve_products(request):
+
+    token = request.GET.get('token', '')
+    if not Token.objects.filter(token=token).exists() or int(time())-Token.objects.get(token=token).timestamp > max_token_expiry_interval:
+        return access_denied()
+
     if request.body:
         body_unicode = request.body.decode('utf-8')
         body = json.loads(body_unicode)
@@ -70,6 +90,7 @@ def discard_cart(request):
         if not Cart.objects.filter(id=body['cart_id']).exists():
             return invalid("cart id")
         Cart.objects.filter(id=body['cart_id']).delete()
+        Cart.objects.filter()
         return response("removed")
     return HttpResponse("API ACCESS ONLY")
 
