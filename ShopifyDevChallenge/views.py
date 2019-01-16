@@ -7,18 +7,19 @@ from .responsegenerator import invalid
 from .responsegenerator import missing
 from .responsegenerator import empty
 from .responsegenerator import response
+from .responsegenerator import response_no_format
 import uuid
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.core.serializers.json import Serializer
 
 
-def raw_jsonify(string, id_name, cnt):
-    return string.replace("\\\"","\"",cnt*2).replace("\\\"","").replace("\"[","[").replace("]\"","]").replace("\"pk\"","\""+id_name+"\"").replace("cost\": \"","cost\": ").replace("\",",",")
+def raw_jsonify(string, id_name):
+    return string.replace("\\\"","\"").replace("\"[","[").replace("]\"","]").replace("\"pk\"","\""+id_name+"\"")
 
 
 def jsonify(obj, id_name, cnt):
-    return HttpResponse(raw_jsonify(CustomSerializer().serialize(obj),id_name,cnt))
+    return HttpResponse(raw_jsonify(CustomSerializer().serialize(obj),id_name))
 
 
 class CustomSerializer(Serializer):
@@ -47,7 +48,7 @@ def retrieve_products(request):
         elif "all" in body:
             if available_inventory_only:
                 products = products.filter(inventory_count__gt=0)
-        return HttpResponse(jsonify(products,"product_id",1000000))
+        return HttpResponse(jsonify(products,"product_id",1000))
     return HttpResponse("API ACCESS ONLY")
 
 @csrf_exempt
@@ -57,7 +58,7 @@ def create_cart(request):
     cart_id = uuid.uuid4()
     print(cart_id)
     Cart.objects.create(id=cart_id)
-    return HttpResponse(cart_id)
+    return response_no_format(str(cart_id))
 
 @csrf_exempt
 def discard_cart(request):
@@ -84,6 +85,7 @@ def checkout_cart(request):
             return invalid("cart id")
 
         cart_id = body['cart_id']
+        cartobj = Cart.objects.filter(id=cart_id)
         cart = Cart.objects.get(id=cart_id)
         for index, item in enumerate(cart.items):
             print(index, item)
@@ -95,8 +97,9 @@ def checkout_cart(request):
 
             cur_product.inventory_count -= quantity
             cur_product.save()
+        result = jsonify(cartobj, "cart_id", len(cartobj[0].items))
         Cart.objects.filter(id=cart_id).delete()
-        return response("checkout success")
+        return result
     return HttpResponse("API ACCESS ONLY")
 
 
