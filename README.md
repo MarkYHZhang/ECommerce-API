@@ -182,5 +182,5 @@ Sample Request:
 Corresponding Sample Response:
 
 	{
-		"response":  "REMOVED"
+	  "response":  "REMOVED"
 	}
