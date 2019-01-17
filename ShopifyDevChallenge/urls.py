@@ -25,5 +25,6 @@ urlpatterns = [
     url(r'^createCart', views.create_cart),
     url(r'^checkoutCart', views.checkout_cart),
     url(r'^discardCart', views.discard_cart),
-    url(r'^modifyCart$', views.modify_cart),
+    url(r'^modifyCart', views.modify_cart),
+    url(r'^accessToken$', views.access_token),
 ]

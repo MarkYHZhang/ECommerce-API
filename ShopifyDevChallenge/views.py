@@ -18,7 +18,7 @@ from secrets import token_hex
 from time import time
 
 
-max_token_expiry_interval = 60*60*3 # 3 hours
+max_token_expiry_interval = 60 # 3 hours
 
 
 def raw_jsonify(string, id_name):
@@ -51,6 +51,7 @@ def retrieve_products(request):
 
     token = request.GET.get('token', '')
     if not Token.objects.filter(token=token).exists() or int(time())-Token.objects.get(token=token).timestamp > max_token_expiry_interval:
+        Token.objects.filter(token=token).delete()
         return access_denied()
 
     if request.body:
@@ -75,6 +76,11 @@ def retrieve_products(request):
 # rate limit by ip for maximum of 1 request per 45 seconds
 @ratelimit(key='ip', rate='1/1m')
 def create_cart(request):
+    token = request.GET.get('token', '')
+    if not Token.objects.filter(token=token).exists() or int(time())-Token.objects.get(token=token).timestamp > max_token_expiry_interval:
+        Token.objects.filter(token=token).delete()
+        return access_denied()
+
     cart_id = uuid.uuid4()
     print(cart_id)
     Cart.objects.create(id=cart_id)
@@ -82,6 +88,11 @@ def create_cart(request):
 
 @csrf_exempt
 def discard_cart(request):
+    token = request.GET.get('token', '')
+    if not Token.objects.filter(token=token).exists() or int(time())-Token.objects.get(token=token).timestamp > max_token_expiry_interval:
+        Token.objects.filter(token=token).delete()
+        return access_denied()
+
     if request.body:
         body_unicode = request.body.decode('utf-8')
         body = json.loads(body_unicode)
@@ -90,13 +101,17 @@ def discard_cart(request):
         if not Cart.objects.filter(id=body['cart_id']).exists():
             return invalid("cart id")
         Cart.objects.filter(id=body['cart_id']).delete()
-        Cart.objects.filter()
         return response("removed")
     return HttpResponse("API ACCESS ONLY")
 
 
 @csrf_exempt
 def checkout_cart(request):
+    token = request.GET.get('token', '')
+    if not Token.objects.filter(token=token).exists() or int(time())-Token.objects.get(token=token).timestamp > max_token_expiry_interval:
+        Token.objects.filter(token=token).delete()
+        return access_denied()
+
     if request.body:
         body_unicode = request.body.decode('utf-8')
         body = json.loads(body_unicode)
@@ -129,6 +144,11 @@ valid_actions = ["add", "remove"]
 
 @csrf_exempt
 def modify_cart(request):
+    token = request.GET.get('token', '')
+    if not Token.objects.filter(token=token).exists() or int(time())-Token.objects.get(token=token).timestamp > max_token_expiry_interval:
+        Token.objects.filter(token=token).delete()
+        return access_denied()
+
     if request.body:
         body_unicode = request.body.decode('utf-8')
         body = json.loads(body_unicode)
