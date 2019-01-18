@@ -16,15 +16,23 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.conf.urls import url
-from .import views
+from . import views
+from . import settings
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     url(r'^retrieveProducts', views.retrieve_products),
     url(r'^createCart', views.create_cart),
     url(r'^checkoutCart', views.checkout_cart),
     url(r'^discardCart', views.discard_cart),
     url(r'^modifyCart', views.modify_cart),
-    url(r'^accessToken$', views.access_token),
+    url(r'^getAccessToken$', views.access_token),
+    url(r'^invalidateAccessToken$', views.invalidate_access_token),
 ]
+
+handler404 = views.customhandler404
+handler500 = views.customhandler500
+
+
+if settings.ADMIN_ENABLED:
+    urlpatterns += path('admin/', admin.site.urls)

@@ -6,4 +6,3 @@ from .models import Token
 admin.site.register(Product)
 admin.site.register(Cart)
 admin.site.register(Token)
-# Register your models here.

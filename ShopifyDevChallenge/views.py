@@ -1,6 +1,6 @@
 from .models import Product
 from .models import Token
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 from .models import Cart
 from django.core.serializers import serialize
 from ratelimit.decorators import ratelimit
@@ -37,12 +37,23 @@ class CustomSerializer(Serializer):
 
 
 @csrf_exempt
-@ratelimit(key='ip', rate='1/60s')
+@ratelimit(key='ip', rate='1/10s')
 def access_token(request):
     token = token_hex(24)
     timestp = int(time())
     Token.objects.create(token=token,timestamp=timestp)
     return response_no_format(token)
+
+
+@csrf_exempt
+@ratelimit(key='ip', rate='1/10s')
+def invalidate_access_token(request):
+    token = request.GET.get('token', '')
+    if Token.objects.filter(token=token).exists():
+        Token.objects.filter(token=token).delete()
+        return response("invalidation success")
+    return response("token does not exist")
+
 
 # rate limit by ip for maximum of 1 request per 5 seconds
 @csrf_exempt
@@ -70,7 +81,7 @@ def retrieve_products(request):
             if available_inventory_only:
                 products = products.filter(inventory_count__gt=0)
         return HttpResponse(jsonify(products,"product_id",1000))
-    return HttpResponse("API ACCESS ONLY")
+    return HttpResponse("ACCESS DENIED: API ACCESS ONLY", status=401)
 
 @csrf_exempt
 # rate limit by ip for maximum of 1 request per 45 seconds
@@ -102,7 +113,7 @@ def discard_cart(request):
             return invalid("cart id")
         Cart.objects.filter(id=body['cart_id']).delete()
         return response("removed")
-    return HttpResponse("API ACCESS ONLY")
+    return HttpResponse("ACCESS DENIED: API ACCESS ONLY", status=401)
 
 
 @csrf_exempt
@@ -136,7 +147,7 @@ def checkout_cart(request):
         result = jsonify(cartobj, "cart_id", len(cartobj[0].items))
         Cart.objects.filter(id=cart_id).delete()
         return result
-    return HttpResponse("API ACCESS ONLY")
+    return HttpResponse("ACCESS DENIED: API ACCESS ONLY", status=401)
 
 
 valid_actions = ["add", "remove"]
@@ -206,5 +217,15 @@ def modify_cart(request):
                 cart.cost -= quantity*cur_product.price
             cart.save()
         return jsonify(cartobj, "cart_id", len(cartobj[0].items))
-    return HttpResponse("API ACCESS ONLY")
+    return HttpResponse("ACCESS DENIED: API ACCESS ONLY", status=401)
+
+
+def customhandler404(request):
+    return HttpResponseNotFound("404 not found!", status=404)
+
+
+def customhandler500(request):
+    return HttpResponse("500 Error", status=500)
+
+
 
