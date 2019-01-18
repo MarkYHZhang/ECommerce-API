@@ -1,3 +1,4 @@
+
 # Shopify Developer Challenge
 
 Hey there, first of all thank you for reviewing my application. I hope you are having a great day so far :D
@@ -8,12 +9,13 @@ This README will be divided into the following two main sections with its subsec
 	 - [Security measures](#security-measures)
 	 - [Unit testing](#unit-testing)
  - [Endpoints](#endpoints)
+     - [`/getAccessToken`](#access-token)
+     - [`/invalidateAccessToken`](#invalidate-access-token)
 	 - [`/retrieveProducts`](#retrieve-products)
 	 - [`/createCart`](#create-cart)
 	 - [`/modifyCart`](#modify-cart)
 	 - [`/checkoutCart`](#checkout-cart)
 	 - [`/discardCart`](#discard-cart)
-	 - [`/accessToken`](#access-token)
 
 ## Design
 ### Process Flow
@@ -40,14 +42,45 @@ Internal Protection (Origin Server):
 	 - Cart model
 	 - Token model
  - RESTful endpoint tests
+     - [`/getAccessToken`](#access-token)
+     - [`/invalidateAccessToken`](#invalidate-access-token)
 	 - [`/retrieveProducts`](#retrieve-products)
 	 - [`/createCart`](#create-cart)
 	 - [`/modifyCart`](#modify-cart)
 	 - [`/checkoutCart`](#checkout-cart)
 	 - [`/discardCart`](#discard-cart)
-	 - [`/accessToken`](#access-token)
  
 ## Endpoints
+### Access Token
+ - ***This is feature is only for demonstration of security capabilities of the API, in actual production environment, access token should be returned as response from the server to the client upon user's login request.***
+ - Token have a max life span of 3 hours (if not already invalidated through logging out)
+
+Access Endpoint: **GET** `/getAccessToken`
+
+**Sample Request:**
+Simply visit /getAccessToken endpoint
+
+**Corresponding Sample Response:**
+
+	{
+	  "response": "4b802b8328f462042463d0b4f46052c9421d712b059256cd"
+	}
+
+___
+### Invalidate Access Token
+ - ***This is feature is only for demonstration of security capabilities of the API, in actual production environment, token will be automatically invalidated upon logout request***
+ 
+Access Endpoint: **GET** `/invalidateAccessToken`
+
+**Sample Request:**
+Simply visit /invalidateAccessToken endpoint
+
+**Corresponding Sample Response:**
+
+	{
+	  "response": "INVALIDATION_SUCCESS"
+	}
+___
 ### Retrieve Products
 Access Endpoint: **POST** `/retrieveProducts` 
 
@@ -57,7 +90,7 @@ Access Endpoint: **POST** `/retrieveProducts`
 | all | boolean | `"all": "true"` | This will return all products |
 | products | array | `"products":["blue_shirt", "red_shirt"]` | Returns a list of product information based on the input (which is a list of product ids) |
 
-Sample Request:
+**Sample Request:**
 
 	{
 	  "availableInventoryOnly": "false",
@@ -67,7 +100,7 @@ Sample Request:
 	  ]
 	}
 
-Corresponding Sample Response:
+**Corresponding Sample Response:**
 
 	[
 	  {
@@ -83,18 +116,19 @@ Corresponding Sample Response:
 	    "product_id": "red_shirt"
 	  }
 	]
-
+___
 ### Create Cart
 Access Endpoint: **GET** `/createCart`
-Sample Request:
+
+**Sample Request:**
 Simply visit /createCart endpoint
 
-Corresponding Sample Response:
+**Corresponding Sample Response:**
 
 	{
 	  "response": "7cc41f04-df61-4a85-8e0d-4decdd2c1a2e"
 	}
-
+___
 ### Modify Cart 
 Access Endpoint: **POST** `/modifyCart` 
 
@@ -111,7 +145,7 @@ Table for item action
 |product_id| string| `"product_id": "red_shirt"`|Specifies  the product id of the target product
 ||||
 
-Sample Request:
+**Sample Request:**
 
 	{
 	  "cart_id": "7cc41f04-df61-4a85-8e0d-4decdd2c1a2e",
@@ -129,7 +163,7 @@ Sample Request:
 	  ]
 	}
 
-Corresponding Sample Response:
+**Corresponding Sample Response:**
 
 	[
 	  {
@@ -145,16 +179,17 @@ Corresponding Sample Response:
 	    "cart_id": "7cc41f04-df61-4a85-8e0d-4decdd2c1a2e"
 	  }
 	]
-
+___
 ### Checkout Cart
 Access Endpoint: **POST** `/checkoutCart`
-Sample Request:
+
+**Sample Request:**
 
 	{
 	  "cart_id": "7cc41f04-df61-4a85-8e0d-4decdd2c1a2e"
 	}
 
-Corresponding Sample Response:
+**Corresponding Sample Response:**
 
 	[
 	  {
@@ -170,16 +205,17 @@ Corresponding Sample Response:
 	    "cart_id": "7cc41f04-df61-4a85-8e0d-4decdd2c1a2e"
 	  }
 	]
-
+___
 ### Discard Cart
 Access Endpoint: **POST** `/discardCart`
-Sample Request:
+
+**Sample Request:**
 
 	{
 	  "cart_id": "7cc41f04-df61-4a85-8e0d-4decdd2c1a2e"
 	}
 
-Corresponding Sample Response:
+**Corresponding Sample Response:**
 
 	{
 	  "response":  "REMOVED"
