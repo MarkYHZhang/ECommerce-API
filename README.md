@@ -16,6 +16,9 @@ This README will be divided into the following two main sections with its subsec
 	 - [`/modifyCart`](#modify-cart)
 	 - [`/checkoutCart`](#checkout-cart)
 	 - [`/discardCart`](#discard-cart)
+	 
+## Example Deployment
+If you want to test the API, you can use the following example live deployment https://api.shop.markyhzhang.com/
 
 ## Design
 ### Process Flow
