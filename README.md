@@ -1,8 +1,5 @@
 
-# Shopify Developer Challenge
-
-Hey there, first of all thank you for reviewing my application. I hope you are having a great day so far :D
-This README will be divided into the following two main sections with its subsections:
+# ECommerce API
 
  - [Design](#design)
 	 - [Process Flow](#process-flow)
