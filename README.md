@@ -14,9 +14,6 @@
 	 - [`/checkoutCart`](#checkout-cart)
 	 - [`/discardCart`](#discard-cart)
 	 
-## Example Deployment
-If you want to test the API, you can use the following example live deployment https://api.shop.markyhzhang.com/
-
 ## Design
 ### Process Flow
 ![Design flow](https://raw.githubusercontent.com/MarkYHZhang/markyhzhang.github.io/master/static/img/ShopifyDevChallengeFlow.png)
